@@ -1,2 +1,2 @@
 # clean
-Clean Architecture Boilerplate Generation Tool
+Clean Architecture Boilerplate Generation Tool for Go
