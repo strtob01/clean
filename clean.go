@@ -767,13 +767,3 @@ func mkdir(name string) bool {
 	}
 	return true
 }
-
-// clean init
-// ==========
-// Generates necessary files and folders for a new Clean Architecture project
-//
-// clean add interactor AppInstance
-// clean remove interactor AppInstance
-// clean add gateway AppInstance
-// clean add entity Order
-// clean add
