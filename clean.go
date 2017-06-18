@@ -327,8 +327,16 @@ func addObjToProject(dir, objType, objName string, hasTestFolder bool) {
 	// Upper case first character
 	ucObjType := firstCharToUpper(objType)
 
-	contentTmpl := "\n\n// %s is a Clean Architecture %s object that wraps its related methods.\n// TODO: Add description of what the interface does\ntype %s interface {\n\t// TODO define interface methods\n}\n\n// %s is an implementation of %s.\ntype %s struct {\n\t// TODO define struct fields and implement the interface\n}"
-	content := fmt.Sprintf(contentTmpl, ucObjName, ucObjType, ucObjName, lcObjName, ucObjName, lcObjName)
+	var contentTmpl string
+	var content string
+	switch objType {
+	case objInteractor:
+		contentTmpl = "\n\n// %s is a Clean Architecture %s object that wraps its related methods.\n// TODO: Add description of what the interface does\ntype %s interface {\n\t// TODO define interface methods\n}\n\n// %s is an implementation of %s.\ntype %s struct {\n\tps presenter.%s\n\tval validator.%s\n\t// TODO define struct fields and implement the interface\n}"
+		content = fmt.Sprintf(contentTmpl, ucObjName, ucObjType, ucObjName, lcObjName, ucObjName, lcObjName, ucObjName, ucObjName)
+	default:
+		contentTmpl = "\n\n// %s is a Clean Architecture %s object that wraps its related methods.\n// TODO: Add description of what the interface does\ntype %s interface {\n\t// TODO define interface methods\n}\n\n// %s is an implementation of %s.\ntype %s struct {\n\t// TODO define struct fields and implement the interface\n}"
+		content = fmt.Sprintf(contentTmpl, ucObjName, ucObjType, ucObjName, lcObjName, ucObjName, lcObjName)
+	}
 	if err := writeBytesToFile(fp, content); err != nil {
 		return
 	}
@@ -489,7 +497,8 @@ func addUsecaseToObject(basePath, relPath, usecaseName, objectName string) {
 			fmt.Printf("Error in addMethodSignatureToInterface: %s\n", err.Error())
 			return
 		}
-		method := fmt.Sprintf("\n\n// %s implements the %s interface method %s.\nfunc (%s *%s) %s(rqm *reqmodel.%s) {\n\t// TODO: Implement interface method\n}", v, firstCharToUpper(objectName), v, firstCharInWord(firstCharToLower(objectName)), firstCharToLower(objectName), v, v)
+		self := firstCharInWord(firstCharToLower(objectName))
+		method := fmt.Sprintf("\n\n// %s implements the %s interface method %s.\nfunc (%s *%s) %s(rqm *reqmodel.%s) {\n\t// Validate Request Model\n\tif rsm := %s.val.Validate%s(rqm); rsm != nil {\n\t\t%s.ps.Present%sErrVal(rsm)\n\t\treturn\n\t}\n\n\t// TODO: Implement interface method\n}", v, firstCharToUpper(objectName), v, self, firstCharToLower(objectName), v, v, self, v, self, v)
 		newFileBytes, err = addMethodToImpl(newFileBytes, method, objectName)
 		if err != nil {
 			fmt.Printf("Error in addMethodToImpl: %s\n", err.Error())
