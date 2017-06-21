@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
@@ -307,7 +308,7 @@ func addObjToProject(dir, objType, objName string, hasTestFolder bool) {
 				return
 			}
 		case objInteractor:
-			imports := "\n\nimport (\n\t\"%sclean/ifadapter/presenter\"\n\t\"%sclean/usecase/reqmodel\"\n\t\"%sclean/usecase/reqmodel/validator\"\n\t\"%sclean/usecase/respmodel\"\n)"
+			imports := "\n\nimport (\n\t\"errors\"\n\t\"%sclean/ifadapter/presenter\"\n\t\"%sclean/usecase/reqmodel\"\n\t\"%sclean/usecase/reqmodel/validator\"\n\t\"%sclean/usecase/respmodel\"\n)"
 			if err := writeBytesToFile(fp, fmt.Sprintf(imports, projectBaseImportPath, projectBaseImportPath, projectBaseImportPath, projectBaseImportPath)); err != nil {
 				return
 			}
@@ -327,15 +328,156 @@ func addObjToProject(dir, objType, objName string, hasTestFolder bool) {
 	// Upper case first character
 	ucObjType := firstCharToUpper(objType)
 
-	var contentTmpl string
+	//var contentTmpl string
 	var content string
 	switch objType {
+	case objController:
+		tmplData := struct {
+			UcObjName string
+			UcObjType string
+			LcObjName string
+		}{
+			UcObjName: ucObjName,
+			UcObjType: ucObjType,
+			LcObjName: lcObjName,
+		}
+		txtTmpl := `
+
+// {{.UcObjName}} is a Clean Architecture {{.UcObjType}} object that wraps its related methods.
+// TODO: Add description of what the interface does
+type {{.UcObjName}} interface {
+	// TODO add interface methods by using Clean. For more info run "clean help add usecase"
+}
+
+// {{.LcObjName}} is an implementation of {{.UcObjName}}.
+type {{.LcObjName}} struct {
+	ia interactor.{{.UcObjName}}
+	// TODO define struct fields
+}
+
+// New{{.UcObjName}} constructs a new {{.UcObjName}} and returns a nil error if successful. Otherwise it returns an error.
+func New{{.UcObjName}}(ia interactor.{{.UcObjName}}) ({{.UcObjName}}, error) {
+	if ia == nil {
+		return nil, errors.New("Error constructing {{.UcObjName}}")
+	}
+	return &{{.LcObjName}} {
+		ia: ia,
+	}, nil
+}`
+		parsedTmpl := template.Must(template.New("new").Parse(txtTmpl))
+		var b bytes.Buffer
+		parsedTmpl.Execute(&b, tmplData)
+		content = b.String()
+
 	case objInteractor:
-		contentTmpl = "\n\n// %s is a Clean Architecture %s object that wraps its related methods.\n// TODO: Add description of what the interface does\ntype %s interface {\n\t// TODO define interface methods\n}\n\n// %s is an implementation of %s.\ntype %s struct {\n\tps presenter.%s\n\tval validator.%s\n\t// TODO define struct fields and implement the interface\n}"
-		content = fmt.Sprintf(contentTmpl, ucObjName, ucObjType, ucObjName, lcObjName, ucObjName, lcObjName, ucObjName, ucObjName)
+		tmplData := struct {
+			UcObjName string
+			UcObjType string
+			LcObjName string
+		}{
+			UcObjName: ucObjName,
+			UcObjType: ucObjType,
+			LcObjName: lcObjName,
+		}
+		txtTmpl := `
+
+// {{.UcObjName}} is a Clean Architecture {{.UcObjType}} object that wraps its related methods.
+// TODO: Add description of what the interface does
+type {{.UcObjName}} interface {
+	// TODO add interface methods by using Clean. For more info run "clean help add usecase"
+}
+
+// {{.LcObjName}} is an implementation of {{.UcObjName}}.
+type {{.LcObjName}} struct {
+	ps presenter.{{.UcObjName}}
+	val validator.{{.UcObjName}}
+	// TODO define struct fields
+}
+
+// New{{.UcObjName}} constructs a new {{.UcObjName}} and returns a nil error if successful. Otherwise it returns an error.
+func New{{.UcObjName}}(ps presenter.{{.UcObjName}}, val validator.{{.UcObjName}}) ({{.UcObjName}}, error) {
+	if ps == nil || val == nil {
+		return nil, errors.New("Error constructing {{.UcObjName}}")
+	}
+	return &{{.LcObjName}} {
+		ps: ps,
+		val: val,
+	}, nil
+}`
+		parsedTmpl := template.Must(template.New("new").Parse(txtTmpl))
+		var b bytes.Buffer
+		parsedTmpl.Execute(&b, tmplData)
+		content = b.String()
+
+	case objPresenter:
+		tmplData := struct {
+			UcObjName string
+			UcObjType string
+			LcObjName string
+		}{
+			UcObjName: ucObjName,
+			UcObjType: ucObjType,
+			LcObjName: lcObjName,
+		}
+		txtTmpl := `
+
+// {{.UcObjName}} is a Clean Architecture {{.UcObjType}} object that wraps its related methods.
+// TODO: Add description of what the interface does
+type {{.UcObjName}} interface {
+	// TODO add interface methods by using Clean. For more info run "clean help add usecase"
+}
+
+// {{.LcObjName}} is an implementation of {{.UcObjName}}.
+type {{.LcObjName}} struct {
+	vw	view.{{.UcObjName}}
+	// TODO define struct fields
+}
+
+// New{{.UcObjName}} constructs a new {{.UcObjName}} and returns a nil error if successful. Otherwise it returns an error.
+func New{{.UcObjName}}(vw view.{{.UcObjName}}) ({{.UcObjName}}, error) {
+	if vw == nil {
+		return nil, errors.New("Error constructing {{.UcObjName}}")
+	}
+	return &{{.LcObjName}} {
+		vw: vw,
+	}, nil
+}`
+		parsedTmpl := template.Must(template.New("new").Parse(txtTmpl))
+		var b bytes.Buffer
+		parsedTmpl.Execute(&b, tmplData)
+		content = b.String()
+
 	default:
-		contentTmpl = "\n\n// %s is a Clean Architecture %s object that wraps its related methods.\n// TODO: Add description of what the interface does\ntype %s interface {\n\t// TODO define interface methods\n}\n\n// %s is an implementation of %s.\ntype %s struct {\n\t// TODO define struct fields and implement the interface\n}"
-		content = fmt.Sprintf(contentTmpl, ucObjName, ucObjType, ucObjName, lcObjName, ucObjName, lcObjName)
+		tmplData := struct {
+			UcObjName string
+			UcObjType string
+			LcObjName string
+		}{
+			UcObjName: ucObjName,
+			UcObjType: ucObjType,
+			LcObjName: lcObjName,
+		}
+		txtTmpl := `
+
+// {{.UcObjName}} is a Clean Architecture {{.UcObjType}} object that wraps its related methods.
+// TODO: Add description of what the interface does
+type {{.UcObjName}} interface {
+	// TODO add interface methods by using Clean. For more info run "clean help add usecase"
+}
+
+// {{.LcObjName}} is an implementation of {{.UcObjName}}.
+type {{.LcObjName}} struct {
+	// TODO define struct fields
+}
+
+// New{{.UcObjName}} constructs a new {{.UcObjName}}. Returns nil if it fails.
+func New{{.UcObjName}}() {{.UcObjName}} {
+	return &{{.LcObjName}}{}
+}`
+		parsedTmpl := template.Must(template.New("new").Parse(txtTmpl))
+		var b bytes.Buffer
+		parsedTmpl.Execute(&b, tmplData)
+		content = b.String()
 	}
 	if err := writeBytesToFile(fp, content); err != nil {
 		return
