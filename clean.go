@@ -111,7 +111,14 @@ func main() {
 	confPath := confDir + "/" + "cleanrc"
 	confBytes, err := ioutil.ReadFile(filepath.FromSlash(confPath))
 	if err != nil {
-		fmt.Printf("Error reading configuration file. Maybe you haven't created a new Clean Architecture Project by executing 'clean init' yet?\n")
+		if verb != verbInit {
+			fmt.Printf("Error reading configuration file. Maybe you haven't created a new Clean Architecture Project by executing 'clean init' yet?\n")
+		}
+		if nArgs > 1 {
+			fmt.Printf("Invalid number of arguments entered.\n\nUse \"clean help init\" for more information\n\n")
+			return
+		}
+		initProject(filepath.FromSlash(confDir), filepath.FromSlash(confPath))
 		return
 	}
 	keyValuePairs := bytes.Split(confBytes, []byte("="))
@@ -179,6 +186,7 @@ func main() {
 					fmt.Printf("Error creating config file: %s\n", err.Error())
 					return
 				}
+				fmt.Printf("Clean working directory updated successfully\n\n")
 			} else {
 				fmt.Printf("No configuration file exists. Use \"clean init\" to initialise a project instead\n\n")
 			}
@@ -812,7 +820,6 @@ func firstCharToUpper(text string) string {
 }
 
 func initProject(confDir, confPath string) {
-	fmt.Printf("Adding folder structure to current directory...\n")
 	wd, err := os.Getwd()
 	if err != nil {
 		fmt.Printf("Error determining current working directory\n")
@@ -909,6 +916,7 @@ func initProject(confDir, confPath string) {
 		return
 	}
 	//fmt.Printf("Base Directory: %s\n", filepath.Base(ex))
+	fmt.Printf("Clean project initialised successfully\n\n")
 }
 
 func mkdir(name string) bool {
