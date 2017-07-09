@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
@@ -110,7 +111,14 @@ func main() {
 	confPath := confDir + "/" + "cleanrc"
 	confBytes, err := ioutil.ReadFile(filepath.FromSlash(confPath))
 	if err != nil {
-		fmt.Printf("Error reading configuration file. Maybe you haven't created a new Clean Architecture Project by executing 'clean init' yet?\n")
+		if verb != verbInit {
+			fmt.Printf("Error reading configuration file. Maybe you haven't created a new Clean Architecture Project by executing 'clean init' yet?\n")
+		}
+		if nArgs > 1 {
+			fmt.Printf("Invalid number of arguments entered.\n\nUse \"clean help init\" for more information\n\n")
+			return
+		}
+		initProject(filepath.FromSlash(confDir), filepath.FromSlash(confPath))
 		return
 	}
 	keyValuePairs := bytes.Split(confBytes, []byte("="))
@@ -178,6 +186,7 @@ func main() {
 					fmt.Printf("Error creating config file: %s\n", err.Error())
 					return
 				}
+				fmt.Printf("Clean working directory updated successfully\n\n")
 			} else {
 				fmt.Printf("No configuration file exists. Use \"clean init\" to initialise a project instead\n\n")
 			}
@@ -307,7 +316,7 @@ func addObjToProject(dir, objType, objName string, hasTestFolder bool) {
 				return
 			}
 		case objInteractor:
-			imports := "\n\nimport (\n\t\"%sclean/ifadapter/presenter\"\n\t\"%sclean/usecase/reqmodel\"\n\t\"%sclean/usecase/reqmodel/validator\"\n\t\"%sclean/usecase/respmodel\"\n)"
+			imports := "\n\nimport (\n\t\"errors\"\n\t\"%sclean/ifadapter/presenter\"\n\t\"%sclean/usecase/reqmodel\"\n\t\"%sclean/usecase/reqmodel/validator\"\n\t\"%sclean/usecase/respmodel\"\n)"
 			if err := writeBytesToFile(fp, fmt.Sprintf(imports, projectBaseImportPath, projectBaseImportPath, projectBaseImportPath, projectBaseImportPath)); err != nil {
 				return
 			}
@@ -327,15 +336,156 @@ func addObjToProject(dir, objType, objName string, hasTestFolder bool) {
 	// Upper case first character
 	ucObjType := firstCharToUpper(objType)
 
-	var contentTmpl string
+	//var contentTmpl string
 	var content string
 	switch objType {
+	case objController:
+		tmplData := struct {
+			UcObjName string
+			UcObjType string
+			LcObjName string
+		}{
+			UcObjName: ucObjName,
+			UcObjType: ucObjType,
+			LcObjName: lcObjName,
+		}
+		txtTmpl := `
+
+// {{.UcObjName}} is a Clean Architecture {{.UcObjType}} object that wraps its related methods.
+// TODO: Add description of what the interface does
+type {{.UcObjName}} interface {
+	// TODO add interface methods by using Clean. For more info run "clean help add usecase"
+}
+
+// {{.LcObjName}} is an implementation of {{.UcObjName}}.
+type {{.LcObjName}} struct {
+	ia interactor.{{.UcObjName}}
+	// TODO define struct fields
+}
+
+// New{{.UcObjName}} constructs a new {{.UcObjName}} and returns a nil error if successful. Otherwise it returns an error.
+func New{{.UcObjName}}(ia interactor.{{.UcObjName}}) ({{.UcObjName}}, error) {
+	if ia == nil {
+		return nil, errors.New("Error constructing {{.UcObjName}}")
+	}
+	return &{{.LcObjName}} {
+		ia: ia,
+	}, nil
+}`
+		parsedTmpl := template.Must(template.New("new").Parse(txtTmpl))
+		var b bytes.Buffer
+		parsedTmpl.Execute(&b, tmplData)
+		content = b.String()
+
 	case objInteractor:
-		contentTmpl = "\n\n// %s is a Clean Architecture %s object that wraps its related methods.\n// TODO: Add description of what the interface does\ntype %s interface {\n\t// TODO define interface methods\n}\n\n// %s is an implementation of %s.\ntype %s struct {\n\tps presenter.%s\n\tval validator.%s\n\t// TODO define struct fields and implement the interface\n}"
-		content = fmt.Sprintf(contentTmpl, ucObjName, ucObjType, ucObjName, lcObjName, ucObjName, lcObjName, ucObjName, ucObjName)
+		tmplData := struct {
+			UcObjName string
+			UcObjType string
+			LcObjName string
+		}{
+			UcObjName: ucObjName,
+			UcObjType: ucObjType,
+			LcObjName: lcObjName,
+		}
+		txtTmpl := `
+
+// {{.UcObjName}} is a Clean Architecture {{.UcObjType}} object that wraps its related methods.
+// TODO: Add description of what the interface does
+type {{.UcObjName}} interface {
+	// TODO add interface methods by using Clean. For more info run "clean help add usecase"
+}
+
+// {{.LcObjName}} is an implementation of {{.UcObjName}}.
+type {{.LcObjName}} struct {
+	ps presenter.{{.UcObjName}}
+	val validator.{{.UcObjName}}
+	// TODO define struct fields
+}
+
+// New{{.UcObjName}} constructs a new {{.UcObjName}} and returns a nil error if successful. Otherwise it returns an error.
+func New{{.UcObjName}}(ps presenter.{{.UcObjName}}, val validator.{{.UcObjName}}) ({{.UcObjName}}, error) {
+	if ps == nil || val == nil {
+		return nil, errors.New("Error constructing {{.UcObjName}}")
+	}
+	return &{{.LcObjName}} {
+		ps: ps,
+		val: val,
+	}, nil
+}`
+		parsedTmpl := template.Must(template.New("new").Parse(txtTmpl))
+		var b bytes.Buffer
+		parsedTmpl.Execute(&b, tmplData)
+		content = b.String()
+
+	case objPresenter:
+		tmplData := struct {
+			UcObjName string
+			UcObjType string
+			LcObjName string
+		}{
+			UcObjName: ucObjName,
+			UcObjType: ucObjType,
+			LcObjName: lcObjName,
+		}
+		txtTmpl := `
+
+// {{.UcObjName}} is a Clean Architecture {{.UcObjType}} object that wraps its related methods.
+// TODO: Add description of what the interface does
+type {{.UcObjName}} interface {
+	// TODO add interface methods by using Clean. For more info run "clean help add usecase"
+}
+
+// {{.LcObjName}} is an implementation of {{.UcObjName}}.
+type {{.LcObjName}} struct {
+	vw	view.{{.UcObjName}}
+	// TODO define struct fields
+}
+
+// New{{.UcObjName}} constructs a new {{.UcObjName}} and returns a nil error if successful. Otherwise it returns an error.
+func New{{.UcObjName}}(vw view.{{.UcObjName}}) ({{.UcObjName}}, error) {
+	if vw == nil {
+		return nil, errors.New("Error constructing {{.UcObjName}}")
+	}
+	return &{{.LcObjName}} {
+		vw: vw,
+	}, nil
+}`
+		parsedTmpl := template.Must(template.New("new").Parse(txtTmpl))
+		var b bytes.Buffer
+		parsedTmpl.Execute(&b, tmplData)
+		content = b.String()
+
 	default:
-		contentTmpl = "\n\n// %s is a Clean Architecture %s object that wraps its related methods.\n// TODO: Add description of what the interface does\ntype %s interface {\n\t// TODO define interface methods\n}\n\n// %s is an implementation of %s.\ntype %s struct {\n\t// TODO define struct fields and implement the interface\n}"
-		content = fmt.Sprintf(contentTmpl, ucObjName, ucObjType, ucObjName, lcObjName, ucObjName, lcObjName)
+		tmplData := struct {
+			UcObjName string
+			UcObjType string
+			LcObjName string
+		}{
+			UcObjName: ucObjName,
+			UcObjType: ucObjType,
+			LcObjName: lcObjName,
+		}
+		txtTmpl := `
+
+// {{.UcObjName}} is a Clean Architecture {{.UcObjType}} object that wraps its related methods.
+// TODO: Add description of what the interface does
+type {{.UcObjName}} interface {
+	// TODO add interface methods by using Clean. For more info run "clean help add usecase"
+}
+
+// {{.LcObjName}} is an implementation of {{.UcObjName}}.
+type {{.LcObjName}} struct {
+	// TODO define struct fields
+}
+
+// New{{.UcObjName}} constructs a new {{.UcObjName}}. Returns nil if it fails.
+func New{{.UcObjName}}() {{.UcObjName}} {
+	return &{{.LcObjName}}{}
+}`
+		parsedTmpl := template.Must(template.New("new").Parse(txtTmpl))
+		var b bytes.Buffer
+		parsedTmpl.Execute(&b, tmplData)
+		content = b.String()
 	}
 	if err := writeBytesToFile(fp, content); err != nil {
 		return
@@ -670,7 +820,6 @@ func firstCharToUpper(text string) string {
 }
 
 func initProject(confDir, confPath string) {
-	fmt.Printf("Adding folder structure to current directory...\n")
 	wd, err := os.Getwd()
 	if err != nil {
 		fmt.Printf("Error determining current working directory\n")
@@ -767,6 +916,7 @@ func initProject(confDir, confPath string) {
 		return
 	}
 	//fmt.Printf("Base Directory: %s\n", filepath.Base(ex))
+	fmt.Printf("Clean project initialised successfully\n\n")
 }
 
 func mkdir(name string) bool {
